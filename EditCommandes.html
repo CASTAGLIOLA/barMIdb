@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>barMI DB</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./css/bootstrap.min.css">
+    <style type="text/css">
+      html {overflow-y: scroll; height: 100%;}
+    </style>
+  </head>
+  <script type="text/javascript" src="./js/jquery.min.js"></script>
+  <script type="text/javascript" src="./js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="./js/angular.min.js"></script>
+  <script type="text/javascript" src="./js/angular-cookies.js"></script>
+  <script type="text/javascript" src="./js/angular-sanitize.min.js"></script>
+  <script type="text/javascript" src="./js/angular.fr-fr.js"></script>
+  <script type="text/javascript">
+  var app = angular.module('app',['ngSanitize','ngCookies']);
+
+  app.filter('ceil', function() {
+      return function(input) {
+          return Math.ceil(input);
+      };
+  });
+
+  app.controller('controller', function ($scope, $http, $scope, $cookieStore) {
+
+  	$scope.id = $cookieStore.get('_id');
+  	$scope.setId = function() {
+  		if ($scope.id) {
+  			$cookieStore.put('_id', $scope.id);			
+  		} else {
+  			$cookieStore.remove('_id');			
+  		}
+  	}
+  	var empty = {};
+  	
+  	$scope.selected = false;
+  	$scope.creating = false;
+  	$scope.updating = false;
+  	
+	$scope.alert = {};
+	$scope.clients = [];
+	$scope.client = {};
+	$scope.articles = [];
+	$scope.article = {};
+	$scope.commandes = [];
+	$scope.commande = {};
+  	
+
+	$scope.nbre={};
+	$scope.hr={};
+	$scope.size = 0;
+	$scope.offset = 0;
+	$scope.length = 5;
+	
+	var init = function() {
+	  	$scope.selected = false;
+	  	$scope.creating = false;
+	  	$scope.updating = false;
+	  	$scope.commande = angular.copy(empty);
+	}
+  	$scope.clean = function() {
+  		init();
+  	}
+	var size = function() {
+  		if ($scope.id) {
+  	  		$http.get('/' + $scope.id + '/commandes/size')
+  	  		.success(function(data) {
+  	  			$scope.size = data;
+  	  	    }).error(function(data) {
+  	  			$scope.size = 0;
+  	  	    });  			
+  		}
+  	}
+	var page = function() {
+		if ($scope.id) {
+			$http.get('/' + $scope.id + '/commandes/page',{"params":{"offset":$scope.offset,"length":$scope.length}})
+			.success(function(data) {
+				$scope.commandes = data;
+		    }).error(function(data) {
+		    	$scope.commandes = [];
+		    });			
+		}
+	}
+  	$scope.select = function(commande) {
+  		if (commande) {
+  			$scope.creating = false;
+  			$scope.updating = true;
+  	  		$scope.commande = commande;
+  		} else {
+  			$scope.creating = true;
+  			$scope.updating = false;  			
+  		}
+  		$scope.selected = true;
+  	}
+  	$scope.create = function() {
+  		var message = "Client=" + $scope.commande.client.id + "&Article=" + $scope.commande.article.id + "&Nombre=" + $scope.commande.nbre + "&Vendeur="+0;
+  		//&Horodatage" +$scope.commande.hr;
+	  	$http({method:'POST',url:'/' + $scope.id + '/commandes/create',data:message,headers:{'Content-Type': 'application/x-www-form-urlencoded'}})
+	  	.success(function(response) {
+	  		display("info","La commande  a bien été créé.");
+	  		init();
+	  		$scope.size = 0;
+	  		$scope.offset = 0;
+	  		size();
+	  		page();
+  	  	}).error(function(response) {
+  	  		display("error","Une erreur s'est produite lors de la création d'une commande ."+message);
+  	  	});
+  	}
+  	$scope.update = function() {
+  		var message = "idCommande=" + $scope.commande.id + "&Article=" +  + $scope.commande.article.id + "&Nombre" + $scope.commande.nbre +"&Horodatage" +$scope.commande.hr; 
+  		$http({method:'POST',url:'/' + $scope.id + '/artcles/update',data:message,headers:{'Content-Type': 'application/x-www-form-urlencoded'}})
+	  	.success(function(response) {
+	  		display("info","La commande a bien été modifiée.");
+	  		init();	  		  	  		
+  	  	}).error(function(response) {
+  	  		display("error","Une erreur s'est produite lors de la modification de la commande #" + $scope.commande.id + ".");
+  	  	});
+  	}
+  	$scope.remove = function(commande) {
+  		$scope.commande = commande;
+  		$('#modal').modal('show');
+  	}
+  	$scope.erase = function() {
+  		$('#modal').modal('hide');
+  		var message = "id=" + $scope.commande.id;
+  		$http({method:'POST',url:'/' + $scope.id + '/commandes/delete',data:message,headers: {'Content-Type': 'application/x-www-form-urlencoded'}})
+	  	.success(function(response) {
+	  		display("info","La commande  a bien été supprimée.");
+	  		init();
+	  		$scope.size = 0;
+	  		$scope.offset = 0;
+	  		size();
+	  		page();
+  	  	}).error(function(response) {
+  	  		display("error","Une erreur s'est produite lors de la suppression de la commande #" + $scope.commande.id + ".");
+  	  	});
+  	}
+
+  	var clients = function() {
+  		if ($scope.id) {
+  	  		$http.get('/' + $scope.id + '/clients/list')
+  	  		.success(function(data) {
+  	  			$scope.clients = data;
+  	  	    }).error(function(data) {
+  	  			$scope.clients = [];
+  	  	    });  			
+  		}
+  	}
+
+  
+	
+	var articles = function() {
+  		if ($scope.id) {
+  	  		$http.get('/' + $scope.id + '/articles/list')
+  	  		.success(function(data) {
+  	  			$scope.articles = data;
+  	  	    }).error(function(data) {
+  	  			$scope.articles = [];
+  	  	    });  			
+  		}
+  	}
+
+  
+  	$scope.prev = function() {
+  		if ($scope.length <= $scope.offset) {
+  			$scope.offset = $scope.offset - $scope.length;
+  			page();
+  		}
+  	}
+  	$scope.next = function() {
+  		if ($scope.offset + $scope.length < $scope.size) {
+  			$scope.offset = $scope.offset + $scope.length;
+  			page();			
+  		}
+  	}
+  	$scope.first = function() {
+		$scope.offset = 0;
+		page();
+  	}
+  	$scope.last = function() {
+		$scope.offset = Math.floor(($scope.size - 1) / $scope.length) * $scope.length;
+		page();
+  	}
+  	
+	var display = function(type, message) {
+		$scope.alert.type = type;
+		$scope.alert.message = message;
+		$("#alert").show();		
+	}
+	$scope.dismiss = function() { 
+		$("#alert").hide(); 
+	};
+	
+  	$scope.setType = function(type) {
+  		console.log(type);
+		$scope.article.type=type;
+  		console.log($scope.article.type);
+  	}
+
+  	init();
+  	clients();
+  	articles();
+  
+
+	size();
+	page();
+  	
+});
+  </script>  
+  <body ng-app="app" ng-controller="controller">
+    <header>
+      <div class="navbar navbar-default navbar-custom navbar-static-top">
+        <div class="container">
+          <button class="navbar-toggle" data-toggle="collapse" data-target=".navHeaderCollapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="./index.html">OpenBeer DB</a>
+          <div class="collapse navbar-collapse">
+            <ul class="nav navbar-nav navbar-center">
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><span class="glyphicon glyphicon-pushpin">&ensp;</span> Séance n°1 <span class="caret"></span></a>
+                <ul class="dropdown-menu" role="menu">
+                  <li class="dropdown-header"><a href="ListeClients.html">Liste des clients</a></li>
+                  <li class="dropdown-header"><a href="ListeArticles.html">Liste des articles</a></li>
+                  <!--  <li class="dropdown-header"><a href="page-per-country.html">Pages des bières pour un pays</a></li>
+                  <li class="dropdown-header"><a href="page-per-filter.html">Recherche de bières</a></li>-->
+                </ul>
+              </li>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><span class="glyphicon glyphicon-pushpin">&ensp;</span> Séance n°2 <span class="caret"></span></a>
+                <ul class="dropdown-menu" role="menu">
+                  <li class="dropdown-header"><a href="EditClients.html">Édition des clients</a></li>
+                  <li class="dropdown-header"><a href="EditArticles.html">Édition des articles</a></li>
+                </ul>
+              </li>
+               <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><span class="glyphicon glyphicon-pushpin">&ensp;</span> Commandes <span class="caret"></span></a>
+                <ul class="dropdown-menu" role="menu">
+                  <li class="dropdown-header"><a href="EditCommandes.html">Édition des commandes</a></li>
+                  
+                </ul>
+              </li>
+              <!-- <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><span class="glyphicon glyphicon-pushpin">&ensp;</span> Séance n°3 <span class="caret"></span></a>
+                <ul class="dropdown-menu" role="menu">
+                  <li class="dropdown-header"><a href="dashboard.html">Tableau de bord</a></li>
+                </ul>
+              </li> -->
+              
+            </ul>
+            <form class="navbar-form navbar-right">
+              <div class="form-group">
+                <input type="text" class="form-control" ng-model="id" placeholder="Spécifier votre identifiant de binôme">
+              </div>
+              <button type="submit" ng-click="setId()" class="btn btn-default">Valider</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="container">
+      <section id="search" class="col-md-4">
+        <form class="form" role="form" name="form" ng-if="selected">
+          <fieldset>
+          <legend ng-if="creating">Édition d'une nouvelle commande</legend>
+          <legend ng-if="updating">Édition de la commande #{{commande.id}}</legend>
+            
+            <div class="form-group">
+              <label for="commande.client">Client </label>
+              <select id="commande.client class="form-control" ng-model="commande.client" placeholder="Client" required ng-required="true" ng-change="setClient(commande.client.id)" ng-options="client as client.nom for client in clients track by client.id">
+              </select>
+            </div>
+             <div class="form-group">
+              <label for="commande.article">Article</label>
+              <select id="commande.article class="form-control" ng-model="commande.article" placeholder="Article" required ng-required="true" ng-change="setArticle(commande.article.id)" ng-options="article as article.id for article in articles track by article.id">
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="commande.nbre">Nombre d'articles</label>
+              <input type="number" min="0.00" max="20.00" step ="1" id="commande.nbre" class="form-control" ng-model="commande.nbre" placeholder="Quantité commandée" required ng-required="true" />
+            </div>
+            <div class="form-group pull-right">
+               <button type="reset" class="btn btn-default" ng-click="clean()"><strong>Annuler</strong></button>
+               <button type="submit" class="btn" ng-click="form.$valid && update()" ng-disabled="form.$invalid" ng-if="updating"><strong>Modifier</strong></button>
+               <button type="submit" class="btn" ng-click="form.$valid && create()" ng-disabled="form.$invalid" ng-if="creating"><strong>Ajouter</strong></button>
+             </div>
+          </fieldset>
+        </form>
+        <div class="alert alert-{{alert.type}} alert-dismissible" id="alert" role="alert" style="display:none;">
+          <button type="button" class="close" aria-label="close" ng-click="dismiss()"><span aria-hidden="true">&times;</span></button>
+          <p>{{alert.message}}</p>
+        </div>
+      </section>
+      <section id="results" class="col-md-8">
+        <h2>Commandes <small>({{size}} éléments)</small></h2>
+        <nav aria-label="...">
+          <ul class="pager">
+            <li class="previous"><a class="btn btn-default" ng-click="first()"><span aria-hidden="true" class="glyphicon glyphicon-step-backward"></span> </a></li>
+            <li class="previous"><a class="btn btn-default" ng-click="prev()"><span aria-hidden="true" class="glyphicon glyphicon-chevron-left"></span></a></li>
+            <li ng-if="size > 0">{{(offset / length) + 1 | ceil}} / {{size / length | ceil}}</li>
+            <li class="next"><a class="btn btn-default" ng-click="last()"><span aria-hidden="true" class="glyphicon glyphicon-step-forward"></span></a></li>
+            <li class="next"><a class="btn btn-default" ng-click="next()"><span aria-hidden="true" class="glyphicon glyphicon-chevron-right"></span></a></li>
+          </ul>
+        </nav>
+        <ul class="list-group" ng-repeat="commande in commandes">
+          <li class="list-group-item">
+           
+            <p class="list-group-item-heading">#{{commande.id}} </p>
+            <p class="list-group-item-text">#{{commande.client.id}} {{commande.client.nom}}</p>
+              <p class="list-group-item-text">#{{commande.article.id}} {{commande.article.produit.nom}}</p>
+            <p class="list-group-item-text">{{commande.article.qt}}, {{commande.article.prix}}</p>
+             <p class="list-group-item-text">{{commande.nbre}}</p>
+              <p class="list-group-item-text">{{commande.nbre}}*{{commande.article.prix}}</p>
+            <p class="list-group-item-text text-right">
+              <button type="button" class="btn btn-default" ng-click="remove(commande)"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span></button>
+              <span>&nbsp;</span> 
+              <button type="button" class="btn btn-default" ng-click="select(commande)"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span></button>
+            </p>
+          </li>
+        </ul>
+        <div class="">
+          <button type="button" class="btn btn-info pull-right" ng-click="select()"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
+        </div>
+      </section>
+    </div>
+    <div id="modal" class="modal fade" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Suppression d'une commande </h4>
+          </div>
+          <div class="modal-body">
+            <p>Voulez-vous réellement supprimer la commande #{{commande.id}}&nbsp;?</p>
+            <p>Type&nbsp;: {{commande.article.type.nom}}</p>
+            <p>Produit&nbsp;: {commande.{article.produit.nom}}</p>
+            <p>Contenance&nbsp;: {{commande.article.qt}}</p>
+             <p>Prix unitaire&nbsp;: {{commande.article.prix}}</p>
+             <p> Quantité commandée &nbsp;: {{commande.nbre}} </p>
+             
+             
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Annuler</button>
+            <button type="button" class="btn" ng-click="erase()">Confirmer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
