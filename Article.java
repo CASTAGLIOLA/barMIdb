@@ -1,5 +1,5 @@
 package fr.icam.barMIdb.entities;
-/* Fichier Article.java */
+/* Fichier Article.java 11/04/2017*/
 public class Article {
 
 	private int id;
